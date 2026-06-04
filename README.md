@@ -13,7 +13,17 @@ An [MCP](https://modelcontextprotocol.io) server for the
 
 ## Install
 
-First, clone this repository locally and run:
+### 1. Via PyPI (Recommended)
+
+You can run the MCP server directly without cloning the repository using `uvx`:
+
+```bash
+uvx ensembl-mcp serve
+```
+
+### 2. From Source (For development)
+
+Clone this repository locally and run:
 
 ```bash
 uv sync
@@ -32,7 +42,40 @@ uv sync --dev
 
 To use this MCP server with your favorite AI tools (like Claude Desktop, Cursor, Claude Code, Cline, etc.), you'll configure them to run the server over **stdio**.
 
-Since this project uses `uv` for package management, the most robust way to run it is by directing your LLM client to execute `uv` with the `--directory` flag pointing to your cloned `ensembl-mcp` directory.
+### Method A: Using `uvx` (Recommended)
+
+Since the package is published on PyPI, you can configure your client to run it directly:
+
+#### 1. Claude Desktop
+
+Add the following to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "ensembl": {
+      "command": "uvx",
+      "args": [
+        "ensembl-mcp",
+        "serve"
+      ]
+    }
+  }
+}
+```
+
+#### 2. Cursor IDE
+
+Add a new MCP server in the settings:
+* **Name**: `ensembl`
+* **Type**: `command`
+* **Command**: `uvx ensembl-mcp serve`
+
+---
+
+### Method B: Running from Source
+
+If you prefer running from your local clone, configure your client as follows:
 
 ### 1. Claude Desktop
 
