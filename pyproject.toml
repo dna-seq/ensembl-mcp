@@ -1,6 +1,6 @@
 [project]
 name = "ensembl-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "MCP for the ensembl beta"
 authors = [
     { name = "antonkulaga", email = "antonkulaga@gmail.com" }
