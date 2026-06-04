@@ -151,6 +151,7 @@ activemq-data/
 .env
 .envrc
 .venv
+.ensembl_mcp_outputs/
 env/
 venv/
 ENV/

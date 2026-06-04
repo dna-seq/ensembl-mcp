@@ -35,6 +35,9 @@ background-task capable (MCP SEP-1686 via FastMCP `TaskConfig`).
   agent dependencies installed.
 - Gemini agent models use `GEMINI_API_KEY` or `GOOGLE_API_KEY` from `.env`; do not
   commit real keys.
+- Use `get_sequence_to_file` for large Refget sequences and `graphql_query_to_file`
+  for raw GraphQL results that may be large instead of returning them directly
+  into an LLM context.
 
 ## Common commands
 
@@ -63,3 +66,6 @@ uv run pytest -m integration              # run integration tests
   service, which is not currently reachable. Variants are intentionally out of scope.
 - Most lookups require a `genome_id` (UUID). The human reference genome_id default is
   `a7335667-93e7-11ec-a39d-005056b38ce3`. Use `find_genomes` to resolve other species.
+- Current core GraphQL `sequence` fields expose sequence metadata such as alphabet
+  and checksum, not raw nucleotide/amino-acid strings. Use Refget tools for raw
+  sequence retrieval.

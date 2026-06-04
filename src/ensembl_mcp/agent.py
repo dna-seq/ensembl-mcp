@@ -202,6 +202,49 @@ def create_agent(settings: Settings | None = None) -> Any:
         """
         return asyncio.run(server.op_get_genome(client, genome_id))
 
+    def get_sequence_metadata(sequence_id: str) -> dict[str, Any]:
+        """Get Refget metadata for a sequence digest id.
+
+        Use this to inspect sequence length and aliases before deciding whether
+        to retrieve the actual sequence.
+        """
+        return asyncio.run(server.op_get_sequence_metadata(client, sequence_id))
+
+    def get_sequence_to_file(
+        sequence_id: str,
+        start: int | None = None,
+        end: int | None = None,
+        output_name: str | None = None,
+    ) -> dict[str, Any]:
+        """Stream a Refget sequence or subsequence to a local text file.
+
+        Use this instead of returning sequence text when the user asks to save,
+        download, or retrieve a large sequence. Refget ranges are 0-indexed and
+        half-open: start is included, end is excluded.
+        """
+        return asyncio.run(
+            server.op_get_sequence_to_file(
+                client, sequence_id, settings.output_dir, start, end, output_name
+            )
+        )
+
+    def graphql_query_to_file(
+        query: str,
+        variables: dict[str, Any] | None = None,
+        output_name: str | None = None,
+    ) -> dict[str, Any]:
+        """Run a raw GraphQL query and write the result to a JSON file.
+
+        Use this instead of returning raw data when a user asks for a large
+        payload, a sequence-like payload, or asks to save/download results. The
+        result contains the file path, byte size, and top-level JSON keys.
+        """
+        return asyncio.run(
+            server.op_graphql_query_to_file(
+                client, query, variables, settings.output_dir, output_name
+            )
+        )
+
     model = _create_model(settings, api_key)
     return agent_cls(
         name="Ensembl MCP Agent",
@@ -217,6 +260,9 @@ def create_agent(settings: Settings | None = None) -> Any:
             overlap_region,
             find_genomes,
             get_genome,
+            get_sequence_metadata,
+            get_sequence_to_file,
+            graphql_query_to_file,
         ],
         instructions=[
             "Answer questions about Ensembl beta core data using the provided tools.",
@@ -230,6 +276,14 @@ def create_agent(settings: Settings | None = None) -> Any:
                 "region_name=13, start=32315086, end=32400268."
             ),
             "Use get_product_by_id for ENSP ids and get_transcript for ENST ids.",
+            (
+                "Use graphql_query_to_file instead of returning raw JSON when a "
+                "query may produce a large payload or the user asks to save results."
+            ),
+            (
+                "For raw Refget sequence retrieval, prefer get_sequence_to_file "
+                "unless the user asks for a short subsequence inline."
+            ),
             "Keep answers concise and include stable ids, symbols, or regions when useful.",
             "Explain that variants and rsid lookups are out of scope for this MCP server.",
         ],

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import httpx
 import pytest
 
@@ -6,6 +8,10 @@ from ensembl_mcp.client import EnsemblGraphQLClient, GraphQLError
 from ensembl_mcp.models import GenomeKeywordInput
 
 pytestmark = pytest.mark.integration
+
+
+def _skip_refget_error(error: httpx.HTTPError) -> None:
+    pytest.skip(f"Ensembl Refget endpoint unreachable: {error}")
 
 
 async def test_find_genes_by_symbol(
@@ -93,3 +99,71 @@ async def test_find_genomes_resolves_human(client: EnsemblGraphQLClient) -> None
     except (httpx.HTTPStatusError, GraphQLError) as error:
         pytest.skip(f"Ensembl genome keyword search is currently failing: {error}")
     assert any(g["scientific_name"] == "Homo sapiens" for g in genomes)
+
+
+async def test_graphql_query_to_file(
+    client: EnsemblGraphQLClient, tmp_path: Path
+) -> None:
+    result = await server.op_graphql_query_to_file(
+        client,
+        "{ version { api { major minor patch } } }",
+        None,
+        str(tmp_path),
+        "version_result.json",
+    )
+
+    output_path = tmp_path / "version_result.json"
+    assert result["path"] == str(output_path)
+    assert result["bytes"] == output_path.stat().st_size
+    assert result["keys"] == ["version"]
+    assert '"version"' in output_path.read_text()
+
+
+async def test_get_sequence(client: EnsemblGraphQLClient) -> None:
+    # A known sequence ID on the Ensembl Refget server
+    seq_id = "92addb948c6c652abc1dcecca05f26c0"
+    try:
+        seq = await server.op_get_sequence(client, seq_id, start=0, end=20)
+    except httpx.HTTPError as error:
+        _skip_refget_error(error)
+    assert len(seq) == 20
+    assert seq.isalpha()
+
+
+async def test_get_sequence_to_file(
+    client: EnsemblGraphQLClient, tmp_path: Path
+) -> None:
+    seq_id = "92addb948c6c652abc1dcecca05f26c0"
+    try:
+        result = await server.op_get_sequence_to_file(
+            client,
+            seq_id,
+            str(tmp_path),
+            start=0,
+            end=20,
+            output_name="refget_sequence.txt",
+        )
+    except httpx.HTTPError as error:
+        _skip_refget_error(error)
+
+    output_path = tmp_path / "refget_sequence.txt"
+    sequence = output_path.read_text()
+    assert result["path"] == str(output_path)
+    assert result["bytes"] == 20
+    assert result["sequence_id"] == seq_id
+    assert result["start"] == 0
+    assert result["end"] == 20
+    assert len(sequence) == 20
+    assert sequence.isalpha()
+
+
+async def test_get_sequence_metadata(client: EnsemblGraphQLClient) -> None:
+    seq_id = "92addb948c6c652abc1dcecca05f26c0"
+    try:
+        metadata = await server.op_get_sequence_metadata(client, seq_id)
+    except httpx.HTTPError as error:
+        _skip_refget_error(error)
+    assert "metadata" in metadata
+    assert "length" in metadata["metadata"]
+    assert metadata["metadata"]["length"] > 0
+

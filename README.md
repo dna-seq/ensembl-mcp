@@ -247,7 +247,11 @@ uv run ensembl-mcp serve --transport http --host 0.0.0.0 --port 8000
 | `overlap_region` | Genes/transcripts overlapping a genomic interval. |
 | `find_genomes` | Resolve a species/assembly keyword to genome(s) + `genome_id`. |
 | `get_genome` | Genome metadata by `genome_id`. |
+| `get_sequence` | Raw Refget sequence or subsequence by digest id. |
+| `get_sequence_to_file` | Stream a Refget sequence or subsequence to a local text file. |
+| `get_sequence_metadata` | Refget metadata and aliases for a sequence digest id. |
 | `graphql_query` | Run an arbitrary raw GraphQL query. |
+| `graphql_query_to_file` | Run an arbitrary raw GraphQL query and write the JSON result to a file. |
 | `bulk_find_genes` | Resolve many symbols at once (background-task showcase, with progress). |
 
 Most lookups accept a `genome_id` (UUID); it defaults to the human reference
@@ -263,7 +267,11 @@ uvx --from ensembl-mcp ensembl-mcp examples gene BRCA2
 uvx --from ensembl-mcp ensembl-mcp examples genome --scientific-name "Homo sapiens"
 uvx --from ensembl-mcp ensembl-mcp examples overlap 13 32315086 32400268
 uvx --from ensembl-mcp ensembl-mcp examples bulk BRCA2 TP53 EGFR
+uvx --from ensembl-mcp ensembl-mcp examples sequence 6aef897c3d6ff0c78aff06ac189178dd --start 0 --end 20
+uvx --from ensembl-mcp ensembl-mcp examples sequence 6aef897c3d6ff0c78aff06ac189178dd --start 0 --end 20 --output-name refget_sequence.txt
+uvx --from ensembl-mcp ensembl-mcp examples sequence-metadata 6aef897c3d6ff0c78aff06ac189178dd
 uvx --from ensembl-mcp ensembl-mcp examples raw '{ version { api { major minor patch } } }'
+uvx --from ensembl-mcp ensembl-mcp examples raw '{ version { api { major minor patch } } }' --output-name version.json
 ```
 
 ### From Source (For development)
@@ -274,7 +282,11 @@ uv run ensembl-mcp examples gene BRCA2
 uv run ensembl-mcp examples genome --scientific-name "Homo sapiens"
 uv run ensembl-mcp examples overlap 13 32315086 32400268
 uv run ensembl-mcp examples bulk BRCA2 TP53 EGFR
+uv run ensembl-mcp examples sequence 6aef897c3d6ff0c78aff06ac189178dd --start 0 --end 20
+uv run ensembl-mcp examples sequence 6aef897c3d6ff0c78aff06ac189178dd --start 0 --end 20 --output-name refget_sequence.txt
+uv run ensembl-mcp examples sequence-metadata 6aef897c3d6ff0c78aff06ac189178dd
 uv run ensembl-mcp examples raw '{ version { api { major minor patch } } }'
+uv run ensembl-mcp examples raw '{ version { api { major minor patch } } }' --output-name version.json
 ```
 
 ## Natural-Language Agent
@@ -327,6 +339,8 @@ Then ask a question:
 uvx --from ensembl-mcp ensembl-mcp agent "Which human chromosome contains BRCA2?"
 uvx --from ensembl-mcp ensembl-mcp agent "Find the Ensembl stable id for TP53 in human."
 uvx --from ensembl-mcp ensembl-mcp agent "Which genes overlap human chromosome 13:32315086-32400268?"
+uvx --from ensembl-mcp ensembl-mcp agent "In human, I mean the tumor protein p53 gene. Give me its HGNC symbol, Ensembl gene stable id, and chromosome. Do not discuss variants."
+uvx --from ensembl-mcp ensembl-mcp agent "ENSP00000369497.3 is an Ensembl product stable id. What product type is it, and what is its length?"
 ```
 
 #### From Source (For development)
@@ -335,6 +349,8 @@ uvx --from ensembl-mcp ensembl-mcp agent "Which genes overlap human chromosome 1
 uv run ensembl-mcp agent "Which human chromosome contains BRCA2?"
 uv run ensembl-mcp agent "Find the Ensembl stable id for TP53 in human."
 uv run ensembl-mcp agent "Which genes overlap human chromosome 13:32315086-32400268?"
+uv run ensembl-mcp agent "In human, I mean the tumor protein p53 gene. Give me its HGNC symbol, Ensembl gene stable id, and chromosome. Do not discuss variants."
+uv run ensembl-mcp agent "ENSP00000369497.3 is an Ensembl product stable id. What product type is it, and what is its length?"
 ```
 
 Use `--model` to override `ENSEMBL_MCP_AGENT_MODEL_ID` for one run:
@@ -347,6 +363,37 @@ uvx --from ensembl-mcp ensembl-mcp agent --model gemini-flash-latest "Which huma
 uv run ensembl-mcp agent --model gemini-flash-latest "Which human chromosome contains BRCA2?"
 ```
 
+## Large and Raw Payloads
+
+Most GraphQL-backed MCP tools return compact metadata: identifiers, symbols,
+region coordinates, transcript counts, product lengths, and genome metadata. The
+current Ensembl beta core GraphQL schema has `sequence` fields on some objects,
+but the GraphQL `Sequence` type currently exposes metadata such as `alphabet`
+and `checksum`, not raw nucleotide or amino-acid strings.
+
+Raw sequence retrieval is handled by the GA4GH Refget API. For short slices,
+`get_sequence` or `examples sequence` can return the sequence string directly.
+For larger ranges or whole sequences, use the file-writing entrypoint:
+
+```bash
+uv run ensembl-mcp examples sequence 6aef897c3d6ff0c78aff06ac189178dd --output-name refget_sequence.txt
+```
+
+The MCP tool equivalent is `get_sequence_to_file`. It streams the Refget response
+to disk under `ENSEMBL_MCP_OUTPUT_DIR` and returns only path, byte size, sequence
+id, and requested range.
+
+For raw GraphQL queries that may return a large JSON payload, use the GraphQL
+file-writing entrypoint:
+
+```bash
+uv run ensembl-mcp examples raw '{ version { api { major minor patch } } }' --output-name version.json
+```
+
+The MCP tool equivalent is `graphql_query_to_file`. It writes under
+`ENSEMBL_MCP_OUTPUT_DIR` and returns only the local path, byte size, and top-level
+JSON keys. `output_name` must be a filename, not a path.
+
 ## Configuration
 
 Set via `ENSEMBL_MCP_*` environment variables or a `.env` file. The project
@@ -356,8 +403,10 @@ configuration. Use `.env.template` as the list of supported local values.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `ENSEMBL_MCP_ENDPOINT` | `https://beta.ensembl.org/data/graphql/core` | GraphQL endpoint. |
+| `ENSEMBL_MCP_REFGET_ENDPOINT` | `https://beta.ensembl.org/data/refget` | Refget endpoint for sequence retrieval. |
 | `ENSEMBL_MCP_REQUEST_TIMEOUT` | `60` | HTTP timeout (seconds). |
 | `ENSEMBL_MCP_HUMAN_GENOME_ID` | `a7335667-93e7-11ec-a39d-005056b38ce3` | Default genome id. |
+| `ENSEMBL_MCP_OUTPUT_DIR` | `.ensembl_mcp_outputs` | Directory for file-output tools such as `get_sequence_to_file` and `graphql_query_to_file`. |
 | `ENSEMBL_MCP_AGENT_API_KEY` | unset | API key for the optional Agno agent. |
 | `ENSEMBL_MCP_AGENT_MODEL_ID` | `gpt-4o-mini` | Model id for the Agno agent. `gemini...` ids use the Gemini adapter. |
 | `ENSEMBL_MCP_AGENT_BASE_URL` | unset | Optional OpenAI-compatible base URL. |
@@ -386,3 +435,8 @@ The Ensembl beta `data/graphql` gateway currently serves only the core schema
 resolution by rsid or coordinate - that belongs to the separate
 `ensembl-hypsipyle` variation service, which is not reachable from this gateway.
 Variants are therefore out of scope.
+
+For developer-focused details on the modular client architecture, GA4GH Refget
+integration, and how Refget relates to variant representation standards, see the
+[Architecture and Refget Integration](docs/refget_and_architecture.md) guide.
+

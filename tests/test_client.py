@@ -20,3 +20,10 @@ async def test_raw_passthrough_runs_arbitrary_query(client: EnsemblGraphQLClient
 async def test_graphql_errors_raise(client: EnsemblGraphQLClient) -> None:
     with pytest.raises(GraphQLError):
         await client.execute("{ this_field_does_not_exist }")
+
+
+def test_client_inherits_from_traits(client: EnsemblGraphQLClient) -> None:
+    from ensembl_mcp.client import EnsemblGraphQLTrait, EnsemblRefgetTrait
+    assert isinstance(client, EnsemblGraphQLTrait)
+    assert isinstance(client, EnsemblRefgetTrait)
+

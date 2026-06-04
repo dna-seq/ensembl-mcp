@@ -159,12 +159,60 @@ def example_bulk(
     _print(asyncio.run(server.op_bulk_find_genes(client, symbols, genome_id, None)))
 
 
+@examples_app.command("sequence")
+def example_sequence(
+    sequence_id: str = typer.Argument(..., help="Refget sequence digest id."),
+    start: int | None = typer.Option(None, help="0-indexed inclusive start offset."),
+    end: int | None = typer.Option(None, help="0-indexed exclusive end offset."),
+    output_name: str | None = typer.Option(
+        None,
+        help="Write sequence under ENSEMBL_MCP_OUTPUT_DIR with this filename.",
+    ),
+) -> None:
+    """Retrieve a Refget sequence or subsequence, optionally as a file."""
+    settings = get_settings()
+    client = EnsemblGraphQLClient(settings)
+    if output_name is not None:
+        _print(
+            asyncio.run(
+                server.op_get_sequence_to_file(
+                    client, sequence_id, settings.output_dir, start, end, output_name
+                )
+            )
+        )
+        return
+    typer.echo(asyncio.run(server.op_get_sequence(client, sequence_id, start, end)))
+
+
+@examples_app.command("sequence-metadata")
+def example_sequence_metadata(
+    sequence_id: str = typer.Argument(..., help="Refget sequence digest id."),
+) -> None:
+    """Retrieve Refget metadata for a sequence digest id."""
+    client = EnsemblGraphQLClient(get_settings())
+    _print(asyncio.run(server.op_get_sequence_metadata(client, sequence_id)))
+
+
 @examples_app.command("raw")
 def example_raw(
     query: str = typer.Argument(..., help="A raw GraphQL query string."),
+    output_name: str | None = typer.Option(
+        None,
+        help="Write the JSON result under ENSEMBL_MCP_OUTPUT_DIR with this filename.",
+    ),
 ) -> None:
-    """Run a raw GraphQL query."""
-    client = EnsemblGraphQLClient(get_settings())
+    """Run a raw GraphQL query, optionally writing the result to a file."""
+    settings = get_settings()
+    client = EnsemblGraphQLClient(settings)
+    if output_name is not None:
+        _print(
+            asyncio.run(
+                server.op_graphql_query_to_file(
+                    client, query, None, settings.output_dir, output_name
+                )
+            )
+        )
+        return
     _print(asyncio.run(client.execute(query)))
 
 

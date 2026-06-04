@@ -1,3 +1,7 @@
+import hashlib
+import json
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from eliot import start_action
@@ -128,6 +132,70 @@ async def op_get_genome(
     return data.get("genome")
 
 
+def _default_graphql_output_name(
+    query: str, variables: dict[str, Any] | None = None
+) -> str:
+    payload = json.dumps({"query": query, "variables": variables or {}}, sort_keys=True)
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    return f"ensembl_graphql_{timestamp}_{digest}.json"
+
+
+def _default_sequence_output_name(
+    sequence_id: str,
+    start: int | None = None,
+    end: int | None = None,
+) -> str:
+    payload = json.dumps(
+        {"sequence_id": sequence_id, "start": start, "end": end},
+        sort_keys=True,
+    )
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    return f"refget_sequence_{timestamp}_{digest}.txt"
+
+
+def _resolve_output_path(
+    output_dir: str,
+    output_name: str | None,
+    default_name: str,
+    suffix: str,
+) -> Path:
+    directory = Path(output_dir).expanduser()
+    filename = output_name or default_name
+    path = Path(filename)
+    if path.name != filename:
+        raise ValueError("output_name must be a filename, not a path.")
+    if path.suffix != suffix:
+        path = path.with_suffix(suffix)
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory / path
+
+
+async def op_graphql_query_to_file(
+    client: EnsemblGraphQLClient,
+    query: str,
+    variables: dict[str, Any] | None,
+    output_dir: str,
+    output_name: str | None = None,
+) -> dict[str, Any]:
+    """Run a GraphQL query and write the JSON data payload to a local file."""
+    output_path = _resolve_output_path(
+        output_dir,
+        output_name,
+        _default_graphql_output_name(query, variables),
+        ".json",
+    )
+    data = await client.execute(query, variables)
+    encoded = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
+    output_path.write_bytes(encoded)
+    return {
+        "path": str(output_path),
+        "bytes": len(encoded),
+        "keys": sorted(data.keys()),
+    }
+
+
 async def op_bulk_find_genes(
     client: EnsemblGraphQLClient,
     symbols: list[str],
@@ -152,6 +220,48 @@ async def op_bulk_find_genes(
     return {"found": found, "missing": [{"symbol": s} for s in missing]}
 
 
+async def op_get_sequence(
+    client: EnsemblGraphQLClient,
+    sequence_id: str,
+    start: int | None = None,
+    end: int | None = None,
+) -> str:
+    return await client.fetch_sequence(sequence_id, start, end)
+
+
+async def op_get_sequence_to_file(
+    client: EnsemblGraphQLClient,
+    sequence_id: str,
+    output_dir: str,
+    start: int | None = None,
+    end: int | None = None,
+    output_name: str | None = None,
+) -> dict[str, Any]:
+    output_path = _resolve_output_path(
+        output_dir,
+        output_name,
+        _default_sequence_output_name(sequence_id, start, end),
+        ".txt",
+    )
+    bytes_written = await client.fetch_sequence_to_file(
+        sequence_id, output_path, start, end
+    )
+    return {
+        "path": str(output_path),
+        "bytes": bytes_written,
+        "sequence_id": sequence_id,
+        "start": start,
+        "end": end,
+    }
+
+
+async def op_get_sequence_metadata(
+    client: EnsemblGraphQLClient,
+    sequence_id: str,
+) -> dict[str, Any]:
+    return await client.fetch_sequence_metadata(sequence_id)
+
+
 def create_server(settings: Settings | None = None) -> FastMCP:
     """Build and configure the Ensembl GraphQL MCP server."""
     settings = settings or get_settings()
@@ -160,7 +270,8 @@ def create_server(settings: Settings | None = None) -> FastMCP:
         "ensembl-mcp",
         instructions=(
             "Query the Ensembl beta GraphQL API for genes, transcripts, proteins, "
-            "regions and genomes. Most lookups need a genome_id (a UUID); use "
+            "regions and genomes, and retrieve raw sequences or sequence metadata "
+            "via the GA4GH Refget API. Most lookups need a genome_id (a UUID); use "
             "find_genomes to resolve a species name to its genome_id. The human "
             f"reference genome_id is {settings.human_genome_id}."
         ),
@@ -175,6 +286,61 @@ def create_server(settings: Settings | None = None) -> FastMCP:
             -> {"api": {"major": "0", "minor": "2", "patch": "0-beta"}}
         """
         return await op_version(client)
+
+    @mcp.tool(task=TASK)
+    async def get_sequence(
+        sequence_id: str,
+        start: int | None = None,
+        end: int | None = None,
+    ) -> str:
+        """Retrieve a raw biological sequence or subsequence by its digest ID.
+
+        The sequence_id can be a cryptographic digest (such as MD5 or ga4gh SQ. prefix).
+        Use start and end (0-indexed, half-open) to request a subsequence.
+
+        Example:
+            get_sequence(sequence_id="6681ac2f62509cfc220d78751b8dc524", start=1, end=20)
+            -> "AAGTCT..."
+        """
+        return await op_get_sequence(client, sequence_id, start, end)
+
+    @mcp.tool(task=TASK)
+    async def get_sequence_to_file(
+        sequence_id: str,
+        start: int | None = None,
+        end: int | None = None,
+        output_name: str | None = None,
+    ) -> dict[str, Any]:
+        """Stream a Refget sequence or subsequence to a local text file.
+
+        Use this instead of ``get_sequence`` when retrieving a large sequence
+        that should not be returned directly into an LLM context. Files are
+        written under ``ENSEMBL_MCP_OUTPUT_DIR``. ``output_name`` must be a
+        filename, not a path.
+
+        Example:
+            get_sequence_to_file(
+                sequence_id="6681ac2f62509cfc220d78751b8dc524",
+                start=0,
+                end=20,
+                output_name="refget_sequence.txt",
+            )
+            -> {"path": ".ensembl_mcp_outputs/refget_sequence.txt",
+                "bytes": 20, "sequence_id": "...", "start": 0, "end": 20}
+        """
+        return await op_get_sequence_to_file(
+            client, sequence_id, settings.output_dir, start, end, output_name
+        )
+
+    @mcp.tool(task=TASK)
+    async def get_sequence_metadata(sequence_id: str) -> dict[str, Any]:
+        """Retrieve metadata and cross-authority aliases for a sequence digest ID.
+
+        Example:
+            get_sequence_metadata(sequence_id="6681ac2f62509cfc220d78751b8dc524")
+            -> {"metadata": {"length": 12345, "aliases": [{"naming_authority": "ensembl", "alias": "..."}]}}
+        """
+        return await op_get_sequence_metadata(client, sequence_id)
 
     @mcp.tool(task=TASK)
     async def find_genes_by_symbol(
@@ -348,6 +514,31 @@ def create_server(settings: Settings | None = None) -> FastMCP:
                                      "patch": "0-beta"}}}
         """
         return await client.execute(query, variables, endpoint)
+
+    @mcp.tool(task=TASK)
+    async def graphql_query_to_file(
+        query: str,
+        variables: dict[str, Any] | None = None,
+        output_name: str | None = None,
+    ) -> dict[str, Any]:
+        """Run an arbitrary GraphQL query and write the result to a JSON file.
+
+        Use this instead of ``graphql_query`` when a query may return a large
+        payload that would be inconvenient for an LLM context. Files are written
+        under the configured ``ENSEMBL_MCP_OUTPUT_DIR`` directory. ``output_name``
+        must be a filename, not a path.
+
+        Example:
+            graphql_query_to_file(
+                query="{ version { api { major minor patch } } }",
+                output_name="ensembl_version.json",
+            )
+            -> {"path": ".ensembl_mcp_outputs/ensembl_version.json",
+                "bytes": 89, "keys": ["version"]}
+        """
+        return await op_graphql_query_to_file(
+            client, query, variables, settings.output_dir, output_name
+        )
 
     @mcp.tool(task=TASK)
     async def bulk_find_genes(

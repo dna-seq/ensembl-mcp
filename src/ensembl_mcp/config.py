@@ -27,6 +27,10 @@ class Settings(BaseSettings):
         default=DEFAULT_ENDPOINT,
         description="Base Ensembl GraphQL endpoint used for all queries.",
     )
+    refget_endpoint: str = Field(
+        default="https://beta.ensembl.org/data/refget",
+        description="Base Ensembl Refget endpoint used for sequence queries.",
+    )
     request_timeout: float = Field(
         default=60.0,
         description=(
@@ -37,6 +41,10 @@ class Settings(BaseSettings):
     human_genome_id: str = Field(
         default=HUMAN_GENOME_ID,
         description="Genome id for the human reference assembly (GRCh38).",
+    )
+    output_dir: str = Field(
+        default=".ensembl_mcp_outputs",
+        description="Directory for tools that write large results to files.",
     )
     agent_api_key: str | None = Field(
         default=None,
