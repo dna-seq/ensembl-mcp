@@ -44,11 +44,15 @@ To use this MCP server with your favorite AI tools (like Claude Desktop, Cursor,
 
 ### Method A: Using `uvx` (Recommended)
 
-Since the package is published on PyPI, you can configure your client to run it directly:
+Since the package is published on PyPI, you can configure your client to run it directly without cloning the repository:
 
 #### 1. Claude Desktop
 
 Add the following to your `claude_desktop_config.json`:
+
+*   **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+*   **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+*   **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
 ```json
 {
@@ -67,17 +71,48 @@ Add the following to your `claude_desktop_config.json`:
 #### 2. Cursor IDE
 
 Add a new MCP server in the settings:
-* **Name**: `ensembl`
-* **Type**: `command`
-* **Command**: `uvx ensembl-mcp serve`
+1. Open **Cursor Settings** (gear icon or `Ctrl+,` / `Cmd+,`).
+2. Navigate to **Features** -> **MCP**.
+3. Click **+ Add New MCP Server**.
+4. Fill in the fields:
+   * **Name**: `ensembl`
+   * **Type**: `command`
+   * **Command**: `uvx ensembl-mcp serve`
+5. Click **Save**.
+
+#### 3. Claude Code
+
+For the Claude CLI developer agent (`claudecode`), you can add this server by running:
+
+```bash
+claude mcp add ensembl uvx ensembl-mcp serve
+```
+
+#### 4. Cline / Roo Code (VS Code Extensions)
+
+If you use VS Code extensions like **Cline** or **Roo Code**, edit your local MCP settings file (typically accessible via the extension's MCP settings tab):
+
+```json
+{
+  "mcpServers": {
+    "ensembl": {
+      "command": "uvx",
+      "args": [
+        "ensembl-mcp",
+        "serve"
+      ]
+    }
+  }
+}
+```
 
 ---
 
-### Method B: Running from Source
+### Method B: Running from Source (For development)
 
 If you prefer running from your local clone, configure your client as follows:
 
-### 1. Claude Desktop
+#### 1. Claude Desktop
 
 Add the following to your `claude_desktop_config.json`:
 
@@ -104,9 +139,7 @@ Add the following to your `claude_desktop_config.json`:
 
 > **Note:** Replace `/absolute/path/to/ensembl-mcp` with the actual path where you cloned this repository.
 
----
-
-### 2. Cursor IDE
+#### 2. Cursor IDE
 
 You can add this MCP server directly in the Cursor Settings UI:
 
@@ -122,9 +155,7 @@ You can add this MCP server directly in the Cursor Settings UI:
        ```
 5. Click **Save**.
 
----
-
-### 3. Claude Code
+#### 3. Claude Code
 
 For the Claude CLI developer agent (`claudecode`), you can add this server by running:
 
@@ -132,11 +163,9 @@ For the Claude CLI developer agent (`claudecode`), you can add this server by ru
 claude mcp add ensembl uv --directory "/absolute/path/to/ensembl-mcp" run ensembl-mcp serve
 ```
 
----
+#### 4. Cline / Roo Code (VS Code Extensions)
 
-### 4. Cline / Roo Code (VS Code Extensions)
-
-If you use VS Code extensions like **Cline** or **Roo Code**, edit your local MCP settings file (typically accessible via the extension's MCP settings tab):
+If you use VS Code extensions like **Cline** or **Roo Code**, edit your local MCP settings file:
 
 ```json
 {
@@ -167,11 +196,8 @@ For example, in **Claude Desktop** or **Cline**:
 {
   "mcpServers": {
     "ensembl": {
-      "command": "uv",
+      "command": "uvx",
       "args": [
-        "--directory",
-        "/absolute/path/to/ensembl-mcp",
-        "run",
         "ensembl-mcp",
         "serve"
       ],
@@ -186,6 +212,18 @@ For example, in **Claude Desktop** or **Cline**:
 See [Configuration](#configuration) below for all available environment variables.
 
 ## Run the server
+
+### Via PyPI (Recommended)
+
+```bash
+# stdio (default) - for Claude Desktop, CLI clients, etc.
+uvx ensembl-mcp serve
+
+# streamable HTTP - endpoint at http://<host>:<port>/mcp
+uvx ensembl-mcp serve --transport http --host 0.0.0.0 --port 8000
+```
+
+### From Source (For development)
 
 ```bash
 # stdio (default) - for Claude Desktop, CLI clients, etc.
@@ -217,6 +255,19 @@ Most lookups accept a `genome_id` (UUID); it defaults to the human reference
 
 ## CLI examples (live)
 
+### Via PyPI (Recommended)
+
+```bash
+uvx --from ensembl-mcp ensembl-mcp examples version
+uvx --from ensembl-mcp ensembl-mcp examples gene BRCA2
+uvx --from ensembl-mcp ensembl-mcp examples genome --scientific-name "Homo sapiens"
+uvx --from ensembl-mcp ensembl-mcp examples overlap 13 32315086 32400268
+uvx --from ensembl-mcp ensembl-mcp examples bulk BRCA2 TP53 EGFR
+uvx --from ensembl-mcp ensembl-mcp examples raw '{ version { api { major minor patch } } }'
+```
+
+### From Source (For development)
+
 ```bash
 uv run ensembl-mcp examples version
 uv run ensembl-mcp examples gene BRCA2
@@ -229,6 +280,16 @@ uv run ensembl-mcp examples raw '{ version { api { major minor patch } } }'
 ## Natural-Language Agent
 
 The optional Agno agent lets you ask natural-language questions from the CLI.
+
+### Via PyPI (Recommended)
+
+```bash
+# Make sure to set GEMINI_API_KEY, GOOGLE_API_KEY, or ENSEMBL_MCP_AGENT_API_KEY in your environment first
+uvx --from ensembl-mcp ensembl-mcp agent "your natural-language Ensembl question"
+```
+
+### From Source (For development)
+
 Its entrypoint is:
 
 ```bash
@@ -260,6 +321,16 @@ GEMINI_API_KEY=
 
 Then ask a question:
 
+#### Via PyPI (Recommended)
+
+```bash
+uvx --from ensembl-mcp ensembl-mcp agent "Which human chromosome contains BRCA2?"
+uvx --from ensembl-mcp ensembl-mcp agent "Find the Ensembl stable id for TP53 in human."
+uvx --from ensembl-mcp ensembl-mcp agent "Which genes overlap human chromosome 13:32315086-32400268?"
+```
+
+#### From Source (For development)
+
 ```bash
 uv run ensembl-mcp agent "Which human chromosome contains BRCA2?"
 uv run ensembl-mcp agent "Find the Ensembl stable id for TP53 in human."
@@ -269,6 +340,10 @@ uv run ensembl-mcp agent "Which genes overlap human chromosome 13:32315086-32400
 Use `--model` to override `ENSEMBL_MCP_AGENT_MODEL_ID` for one run:
 
 ```bash
+# Via PyPI
+uvx --from ensembl-mcp ensembl-mcp agent --model gemini-flash-latest "Which human chromosome contains BRCA2?"
+
+# From Source
 uv run ensembl-mcp agent --model gemini-flash-latest "Which human chromosome contains BRCA2?"
 ```
 

@@ -76,19 +76,32 @@ def create_agent(settings: Settings | None = None) -> Any:
     client = EnsemblGraphQLClient(settings)
 
     def get_version() -> dict[str, Any]:
-        """Return the Ensembl GraphQL API version."""
+        """Return the Ensembl GraphQL API version.
+
+        Use this only when the user asks about the Ensembl API version.
+        """
         return asyncio.run(server.op_version(client))
 
     def find_genes_by_symbol(
         symbol: str, genome_id: str = settings.human_genome_id
     ) -> list[dict[str, Any]]:
-        """Find Ensembl genes by display symbol, for example BRCA2."""
+        """Find Ensembl genes by display symbol in one genome.
+
+        Use this for questions like "where is BRCA2?", "TP53 stable id", or
+        "chromosome for the human p53 gene" after resolving the likely symbol.
+        The response includes stable_id, symbol, name, biotype, transcript_count,
+        and genomic slice coordinates.
+        """
         return asyncio.run(server.op_find_genes_by_symbol(client, symbol, genome_id))
 
     def get_gene_by_id(
         stable_id: str, genome_id: str = settings.human_genome_id
     ) -> dict[str, Any] | None:
-        """Get a gene by Ensembl stable id."""
+        """Get a gene by Ensembl gene stable id.
+
+        Use this when the user provides an ENSG id, versioned or unversioned,
+        for example ENSG00000139618 or ENSG00000139618.19.
+        """
         return asyncio.run(server.op_get_gene_by_id(client, genome_id, stable_id))
 
     def get_transcript(
@@ -96,7 +109,12 @@ def create_agent(settings: Settings | None = None) -> Any:
         symbol: str | None = None,
         genome_id: str = settings.human_genome_id,
     ) -> dict[str, Any] | None:
-        """Get a transcript by stable id or symbol."""
+        """Get one transcript by Ensembl transcript stable id or transcript symbol.
+
+        Use this for ENST ids such as ENST00000380152 or exact transcript symbols
+        such as BRCA2-201. For general gene symbols like BRCA2, use
+        find_genes_by_symbol first unless the user explicitly asks for transcripts.
+        """
         return asyncio.run(server.op_get_transcript(client, genome_id, stable_id, symbol))
 
     def transcript_search(
@@ -105,7 +123,11 @@ def create_agent(settings: Settings | None = None) -> Any:
         page: int = 1,
         per_page: int = 10,
     ) -> dict[str, Any]:
-        """Search transcripts by identifier across one or more genomes."""
+        """Search transcripts by identifier across one or more genomes.
+
+        Use this for fuzzy ENST or transcript-id searches, not for gene-name
+        lookup. For gene symbols such as BRCA2 or TP53, use find_genes_by_symbol.
+        """
         return asyncio.run(
             server.op_transcript_search(
                 client, query, genome_ids or [settings.human_genome_id], page, per_page
@@ -115,13 +137,22 @@ def create_agent(settings: Settings | None = None) -> Any:
     def get_product_by_id(
         stable_id: str, genome_id: str = settings.human_genome_id
     ) -> dict[str, Any] | None:
-        """Get a protein product by Ensembl stable id."""
+        """Get a product by Ensembl product stable id.
+
+        Use this for ENSP protein product ids such as ENSP00000369497.3. The
+        response includes product type and length, for example Protein length
+        3418 for ENSP00000369497.3.
+        """
         return asyncio.run(server.op_get_product_by_id(client, genome_id, stable_id))
 
     def get_region(
         name: str, genome_id: str = settings.human_genome_id
     ) -> dict[str, Any] | None:
-        """Get a genome region, such as a chromosome, by name."""
+        """Get a genome region, such as a chromosome, by name.
+
+        Use this when the user asks about region metadata for a chromosome or
+        scaffold name, for example chromosome 13.
+        """
         return asyncio.run(server.op_get_region(client, genome_id, name))
 
     def overlap_region(
@@ -130,7 +161,12 @@ def create_agent(settings: Settings | None = None) -> Any:
         end: int,
         genome_id: str = settings.human_genome_id,
     ) -> dict[str, Any]:
-        """List genes and transcripts overlapping a genomic interval."""
+        """List genes and transcripts overlapping a genomic interval.
+
+        Use this for coordinate/locus prompts such as chr13:32315086-32400268
+        by passing region_name="13", start=32315086, and end=32400268.
+        The response contains separate genes and transcripts lists.
+        """
         return asyncio.run(
             server.op_overlap_region(client, genome_id, region_name, start, end)
         )
@@ -143,7 +179,11 @@ def create_agent(settings: Settings | None = None) -> Any:
         tolid: str | None = None,
         species_taxonomy_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Resolve species or assembly keywords to Ensembl genome ids."""
+        """Resolve species or assembly keywords to Ensembl genome ids.
+
+        Use this before other tools when the user asks about a non-human species,
+        assembly, common name, scientific name, or taxon id.
+        """
         keyword = GenomeKeywordInput(
             scientific_name=scientific_name,
             common_name=common_name,
@@ -155,7 +195,11 @@ def create_agent(settings: Settings | None = None) -> Any:
         return asyncio.run(server.op_find_genomes(client, keyword))
 
     def get_genome(genome_id: str = settings.human_genome_id) -> dict[str, Any] | None:
-        """Get genome metadata by genome id."""
+        """Get genome metadata by genome id.
+
+        Use this when the user provides a genome UUID or asks to verify the
+        configured/default genome.
+        """
         return asyncio.run(server.op_get_genome(client, genome_id))
 
     model = _create_model(settings, api_key)
@@ -181,6 +225,11 @@ def create_agent(settings: Settings | None = None) -> Any:
                 "does not specify a species or genome."
             ),
             "Use find_genomes before querying non-human species.",
+            (
+                "Parse coordinate prompts like chr13:32315086-32400268 as "
+                "region_name=13, start=32315086, end=32400268."
+            ),
+            "Use get_product_by_id for ENSP ids and get_transcript for ENST ids.",
             "Keep answers concise and include stable ids, symbols, or regions when useful.",
             "Explain that variants and rsid lookups are out of scope for this MCP server.",
         ],
