@@ -85,135 +85,7 @@ Every answer below came from a live Ensembl query—not a model’s recollection
 
 </details>
 
-## Get the Claude plugin
-
-### ⚡ Claude Code
-
-```bash
-git clone https://github.com/dna-seq/ensembl-mcp.git
-claude --plugin-dir ./ensembl-mcp
-```
-
-One install gives Claude the plugin’s skills and its preconfigured, pinned Ensembl
-MCP server. Ask: **“Tell me about BRCA2 and identify its MANE Select
-transcript.”**
-
-### 💼 Claude Desktop and Cowork
-
-Add the standard Claude Desktop MCP configuration from the
-[client setup guide](docs/client_setup.md#claude-desktop-and-cowork). Claude Cowork reuses
-those local MCP servers, so the Ensembl tools are available in Cowork sessions
-after the desktop configuration is connected.
-
-### 📦 Build a portable plugin archive
-
-Build the small, metadata-only ZIP for a Claude client that accepts plugin
-uploads:
-
-```bash
-cd ensembl-mcp
-uv run pack plugin
-```
-
-The generated ZIP launches the published server through `uvx`; it does not bundle
-the repository or a database.
-
-## The same genomics toolkit beyond Claude
-
-The plugin is the primary Claude experience. Its MCP server remains intentionally
-portable, so the same live Ensembl tools also work in:
-
-| Client or workflow | What you reuse |
-| --- | --- |
-| ⚫ **Codex / ChatGPT** | A native Codex plugin that bundles the same skills and Ensembl MCP tools |
-| 🔵 **Google Antigravity** | The same local stdio server through its MCP Servers panel |
-| 🤖 **Custom autonomous agents** | Standard MCP over stdio or streamable HTTP, typed responses, and background tasks |
-| 🖥️ **Cursor, Cline, and other MCP clients** | The same `uvx`-launched server |
-
-## Install the Codex plugin
-
-The native Codex plugin reuses the genomics skills and pinned server configuration
-from this repository. Add the DNA-Seq plugin marketplace:
-
-```bash
-codex plugin marketplace add dna-seq/ensembl-mcp
-```
-
-In Codex, run `/plugins`, choose **DNA-Seq Plugins**, and install
-**Ensembl: Genes, Variants, and Sequences**. The plugin provides both the
-Ensembl tools and the matching genomics workflows.
-
-For a bare-server setup instead, use
-`codex mcp add ensembl -- uvx ensembl-mcp serve`. See
-[Codex setup](docs/client_setup.md#codex-cli-chatgpt-desktop-and-the-codex-ide-extension)
-for details.
-
-## Add it to Antigravity
-
-In Antigravity, open the Agent panel’s **⋯** menu, choose **MCP Servers** →
-**Manage MCP Servers** → **View raw config**, then add:
-
-```json
-{
-  "mcpServers": {
-    "ensembl": {
-      "command": "uvx",
-      "args": ["ensembl-mcp", "serve"]
-    }
-  }
-}
-```
-
-Save the configuration and confirm the server is connected in the MCP Servers
-panel. If Antigravity cannot locate `uvx`, replace `"uvx"` with the absolute
-path printed by `which uvx`. Full instructions are in the
-[client setup guide](docs/client_setup.md#google-antigravity).
-
-## Run it as a standalone MCP server
-
-Use `uvx ensembl-mcp serve` as a standard MCP **stdio** server in any compatible
-client, or run `uvx ensembl-mcp serve --transport http --port 8000` for a
-streamable HTTP endpoint. The tool surface is client-neutral: typed responses,
-bulk operations, file exports for large results, and MCP background tasks work
-whether an engineer or an autonomous agent calls them.
-
-## Why not use an unconnected LLM?
-
-Claude, Codex, and other LLMs can explain what an rsID or MANE Select transcript
-*is*, but their training data is not a live genomics database. Without tools,
-they may:
-
-- 🧭 mix GRCh37 and GRCh38 coordinates;
-- 🧪 omit alleles at multiallelic sites or flatten prediction scopes;
-- 🗓️ answer from stale releases and population datasets;
-- 🎭 confidently invent an identifier, transcript, consequence, or citation.
-
-That distinction matters: fluent biological reasoning is useful, but it cannot
-replace exact database retrieval. `ensembl-mcp` combines both—the LLM plans and
-explains; Ensembl supplies the current records. This is especially important
-when an answer feeds a script, report, PRS workflow, or downstream clinical
-review. See [Validation in Agentic Workflows](docs/validation.md) for concrete
-failure modes.
-
-## Who saves time with this?
-
-- 🔬 **Bioinformaticians** — inspect unfamiliar loci, resolve batches of rsIDs,
-  check transcript consequences, and bridge products to Refget without writing
-  a throwaway client for every question.
-- 🧫 **Biologists** — move from a gene symbol to transcripts, exons, domains,
-  pathways, phenotypes, and cross-references in one conversation.
-- 🧑‍💻 **Citizen scientists** — ask plain-language questions while keeping the
-  identifiers, coordinates, populations, and prediction sources visible.
-- 🤖 **Agent builders** — add typed genomics tools, structured output, file
-  exports, and background-task support to pipelines without maintaining an
-  Ensembl integration.
-
-> **Use it for research and exploration, not as a substitute for clinical
-> interpretation or medical advice.**
-
----
-
-## More live questions
+### More live questions
 
 The same server and plugins also handle transcript structure, sequences, protein
 domains, variant formats, disease associations, regions, populations, and batch
@@ -342,6 +214,132 @@ Batch operations support progress reporting and handle missing/invalid rsIDs
 gracefully.
 
 </details>
+
+## Why not just ask Claude or ChatGPT?
+
+Claude, ChatGPT, Codex, and other LLMs can explain what an rsID or MANE Select
+transcript *is*, but their training data is not a live genomics database. Without
+connected genomics tools, they may:
+
+- 🧭 mix GRCh37 and GRCh38 coordinates;
+- 🧪 omit alleles at multiallelic sites or flatten prediction scopes;
+- 🗓️ answer from stale releases and population datasets;
+- 🎭 confidently invent an identifier, transcript, consequence, or citation.
+
+That distinction matters: fluent biological reasoning is useful, but it cannot
+replace exact database retrieval. `ensembl-mcp` combines both—the LLM plans and
+explains; Ensembl supplies the current records. This is especially important
+when an answer feeds a script, report, PRS workflow, or downstream clinical
+review. See [Validation in Agentic Workflows](docs/validation.md) for concrete
+failure modes.
+
+## Get the Claude plugin
+
+### ⚡ Claude Code
+
+```bash
+git clone https://github.com/dna-seq/ensembl-mcp.git
+claude --plugin-dir ./ensembl-mcp
+```
+
+One install gives Claude the plugin’s skills and its preconfigured, pinned Ensembl
+MCP server. Ask: **“Tell me about BRCA2 and identify its MANE Select
+transcript.”**
+
+### 💼 Claude Desktop and Cowork
+
+Add the standard Claude Desktop MCP configuration from the
+[client setup guide](docs/client_setup.md#claude-desktop-and-cowork). Claude Cowork reuses
+those local MCP servers, so the Ensembl tools are available in Cowork sessions
+after the desktop configuration is connected.
+
+### 📦 Build a portable plugin archive
+
+Build the small, metadata-only ZIP for a Claude client that accepts plugin
+uploads:
+
+```bash
+cd ensembl-mcp
+uv run pack plugin
+```
+
+The generated ZIP launches the published server through `uvx`; it does not bundle
+the repository or a database.
+
+## The same genomics toolkit beyond Claude
+
+The plugin is the primary Claude experience. Its MCP server remains intentionally
+portable, so the same live Ensembl tools also work in:
+
+| Client or workflow | What you reuse |
+| --- | --- |
+| ⚫ **Codex / ChatGPT** | A native Codex plugin that bundles the same skills and Ensembl MCP tools |
+| 🔵 **Google Antigravity** | The same local stdio server through its MCP Servers panel |
+| 🤖 **Custom autonomous agents** | Standard MCP over stdio or streamable HTTP, typed responses, and background tasks |
+| 🖥️ **Cursor, Cline, and other MCP clients** | The same `uvx`-launched server |
+
+## Install the Codex plugin
+
+The native Codex plugin reuses the genomics skills and pinned server configuration
+from this repository. Add the DNA-Seq plugin marketplace:
+
+```bash
+codex plugin marketplace add dna-seq/ensembl-mcp
+```
+
+In Codex, run `/plugins`, choose **DNA-Seq Plugins**, and install
+**Ensembl: Genes, Variants, and Sequences**. The plugin provides both the
+Ensembl tools and the matching genomics workflows.
+
+For a bare-server setup instead, use
+`codex mcp add ensembl -- uvx ensembl-mcp serve`. See
+[Codex setup](docs/client_setup.md#codex-cli-chatgpt-desktop-and-the-codex-ide-extension)
+for details.
+
+## Add it to Antigravity
+
+In Antigravity, open the Agent panel’s **⋯** menu, choose **MCP Servers** →
+**Manage MCP Servers** → **View raw config**, then add:
+
+```json
+{
+  "mcpServers": {
+    "ensembl": {
+      "command": "uvx",
+      "args": ["ensembl-mcp", "serve"]
+    }
+  }
+}
+```
+
+Save the configuration and confirm the server is connected in the MCP Servers
+panel. If Antigravity cannot locate `uvx`, replace `"uvx"` with the absolute
+path printed by `which uvx`. Full instructions are in the
+[client setup guide](docs/client_setup.md#google-antigravity).
+
+## Run it as a standalone MCP server
+
+Use `uvx ensembl-mcp serve` as a standard MCP **stdio** server in any compatible
+client, or run `uvx ensembl-mcp serve --transport http --port 8000` for a
+streamable HTTP endpoint. The tool surface is client-neutral: typed responses,
+bulk operations, file exports for large results, and MCP background tasks work
+whether an engineer or an autonomous agent calls them.
+
+## Who saves time with this?
+
+- 🔬 **Bioinformaticians** — inspect unfamiliar loci, resolve batches of rsIDs,
+  check transcript consequences, and bridge products to Refget without writing
+  a throwaway client for every question.
+- 🧫 **Biologists** — move from a gene symbol to transcripts, exons, domains,
+  pathways, phenotypes, and cross-references in one conversation.
+- 🧑‍💻 **Citizen scientists** — ask plain-language questions while keeping the
+  identifiers, coordinates, populations, and prediction sources visible.
+- 🤖 **Agent builders** — add typed genomics tools, structured output, file
+  exports, and background-task support to pipelines without maintaining an
+  Ensembl integration.
+
+> **Use it for research and exploration, not as a substitute for clinical
+> interpretation or medical advice.**
 
 ---
 
