@@ -1,0 +1,21 @@
+{
+  "name": "dna-seq-plugins",
+  "interface": {
+    "displayName": "DNA-Seq Plugins"
+  },
+  "plugins": [
+    {
+      "name": "ensembl",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/dna-seq/ensembl-mcp.git",
+        "ref": "main"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

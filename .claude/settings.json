@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:beta.ensembl.org)",
+      "WebFetch(domain:www.ensembl.info)",
+      "Bash(curl -s -X POST https://beta.ensembl.org/data/graphql/core -H \"Content-Type: application/json\" -d '{\"query\": \"{ __schema { queryType { fields { name description args { name type { name kind ofType { name } } } } } } }\"}')",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s -X POST https://beta.ensembl.org/data/graphql/variation -H \"Content-Type: application/json\" -d '{\"query\": \"{ __schema { queryType { fields { name description } } } }\"}')",
+      "Bash(curl -s \"https://beta.ensembl.org/api/variation\" -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s \"https://beta.ensembl.org/data/variation\" -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s -X POST https://beta.ensembl.org/data/graphql/core -H 'Content-Type: application/json' -d '{\"query\": \"{ variant\\(by_id: {genome_id: \\\\\"a7335667-93e7-11ec-a39d-005056b38ce3\\\\\", variant_id: \\\\\"1:10153:rs1639547929\\\\\"}\\) { name } }\"}')",
+      "Bash(gh api *)",
+      "Bash(gh search *)",
+      "WebFetch(domain:academic.oup.com)"
+    ]
+  }
+}

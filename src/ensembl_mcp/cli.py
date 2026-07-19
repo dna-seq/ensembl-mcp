@@ -64,10 +64,8 @@ def run_agent(
         settings = settings.model_copy(update={"agent_model_id": model_id})
     if get_agent_api_key(settings) is None:
         typer.echo(
-            (
-                "Set ENSEMBL_MCP_AGENT_API_KEY, GEMINI_API_KEY, or GOOGLE_API_KEY "
-                "in .env or the environment to use the agent."
-            ),
+            "Set ENSEMBL_MCP_AGENT_API_KEY in .env or the environment "
+            "to use the agent.",
             err=True,
         )
         raise typer.Exit(1)
@@ -79,6 +77,121 @@ def example_version() -> None:
     """Print the Ensembl GraphQL API version."""
     client = EnsemblGraphQLClient(get_settings())
     _print(asyncio.run(server.op_version(client)))
+
+
+@examples_app.command("variant")
+def example_variant(
+    identifier: str = typer.Argument(
+        ..., help="Bare rsID or region:position:rsid variant id."
+    ),
+    genome_id: str = typer.Option(HUMAN_GENOME_ID, help="Genome id (UUID)."),
+    compact: bool = typer.Option(False, help="Return a smaller annotation payload."),
+) -> None:
+    """Resolve and annotate a short variant."""
+    settings = get_settings()
+    client = EnsemblGraphQLClient(settings)
+    if ":" in identifier:
+        result = server.op_get_variant(
+            client,
+            genome_id,
+            identifier,
+            settings.variation_endpoint,
+            not compact,
+        )
+    else:
+        result = server.op_get_variant_by_rsid(
+            client,
+            identifier,
+            genome_id,
+            settings.variation_endpoint,
+            full=not compact,
+        )
+    _print(asyncio.run(result))
+
+
+@examples_app.command("resolve-rsids")
+def example_resolve_rsids(
+    rsids: list[str] = typer.Argument(..., help="One or more bare rsIDs."),
+    species: str = typer.Option("human", help="Legacy REST species name."),
+    assembly: str = typer.Option("GRCh38", help="Assembly mapping to retain."),
+) -> None:
+    """Resolve one or more rsIDs to coordinate identifiers."""
+    client = EnsemblGraphQLClient(get_settings())
+    _print(
+        asyncio.run(
+            server.op_batch_resolve_rsids(
+                client,
+                rsids,
+                species,
+                assembly,
+            )
+        )
+    )
+
+
+@examples_app.command("resolve-coordinates")
+def example_resolve_coordinates(
+    coordinates: list[str] = typer.Argument(
+        ..., help="One or more exact region:position coordinates."
+    ),
+    species: str = typer.Option("human", help="Ensembl REST species name."),
+) -> None:
+    """Resolve coordinates to overlapping variations."""
+    client = EnsemblGraphQLClient(get_settings())
+    _print(
+        asyncio.run(
+            server.op_batch_resolve_coordinates(
+                client,
+                coordinates,
+                species,
+            )
+        )
+    )
+
+
+@examples_app.command("populations")
+def example_populations(
+    genome_id: str = typer.Option(HUMAN_GENOME_ID, help="Genome id (UUID)."),
+) -> None:
+    """List variant-frequency population panels."""
+    settings = get_settings()
+    client = EnsemblGraphQLClient(settings)
+    _print(
+        asyncio.run(
+            server.op_list_variant_populations(
+                client,
+                genome_id,
+                settings.variation_endpoint,
+            )
+        )
+    )
+
+
+@examples_app.command("homologies")
+def example_homologies(
+    gene_stable_id: str = typer.Argument(..., help="Ensembl gene stable ID."),
+    genome_id: str = typer.Option(HUMAN_GENOME_ID, help="Genome id (UUID)."),
+) -> None:
+    """Retrieve compara homologies for a gene."""
+    settings = get_settings()
+    client = EnsemblGraphQLClient(settings)
+    _print(
+        asyncio.run(
+            server.op_get_homologies(
+                client,
+                genome_id,
+                gene_stable_id,
+                settings.compara_endpoint,
+            )
+        )
+    )
+
+
+@examples_app.command("releases")
+def example_releases() -> None:
+    """Print Ensembl beta release metadata."""
+    client = EnsemblGraphQLClient(get_settings())
+    _print(asyncio.run(server.op_get_releases(client)))
 
 
 @examples_app.command("gene")

@@ -1,0 +1,35 @@
+{
+  "name": "ensembl",
+  "version": "0.3.0",
+  "description": "Live Ensembl genes, variants, sequences, and genomics workflows for Codex.",
+  "author": {
+    "name": "Anton Kulaga"
+  },
+  "homepage": "https://github.com/dna-seq/ensembl-mcp",
+  "repository": "https://github.com/dna-seq/ensembl-mcp",
+  "license": "MIT",
+  "keywords": [
+    "genomics",
+    "ensembl",
+    "variants",
+    "bioinformatics"
+  ],
+  "skills": "./.claude/skills/",
+  "mcpServers": "./.codex.mcp.json",
+  "interface": {
+    "displayName": "Ensembl: Genes, Variants, and Sequences",
+    "shortDescription": "Live Ensembl genomics tools and workflows for Codex.",
+    "longDescription": "Query live Ensembl genes, variants, population frequencies, phenotypes, proteins, and GA4GH Refget sequences with focused genomics skills.",
+    "developerName": "Anton Kulaga",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "websiteURL": "https://github.com/dna-seq/ensembl-mcp",
+    "defaultPrompt": [
+      "Tell me about BRCA2 and identify its MANE Select transcript.",
+      "What is rs699? Include its population frequencies and consequence."
+    ],
+    "brandColor": "#D97757"
+  }
+}

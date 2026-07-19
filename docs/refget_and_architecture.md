@@ -9,20 +9,20 @@ This document describes the modular trait-based architecture of the `ensembl-mcp
 To maintain a clean separation of concerns, the `EnsemblGraphQLClient` is designed using Python's cooperative multiple inheritance (mixins/traits). This decouples the GraphQL metadata queries from the REST-based GA4GH Refget sequence retrieval.
 
 ```
-       +---------------------+        +--------------------+
-       | EnsemblGraphQLTrait |        | EnsemblRefgetTrait |
-       +----------+----------+        +---------+----------+
-                  ^                             ^
-                  |                             |
-                  +--------------+--------------+
-                                 |
-                     +-----------+-----------+
-                     | EnsemblGraphQLClient  |
-                     +-----------------------+
+ +---------------------+  +--------------------+  +------------------+
+ | EnsemblGraphQLTrait |  | EnsemblRefgetTrait |  | EnsemblRestTrait |
+ +----------+----------+  +---------+----------+  +---------+--------+
+            ^                       ^                       ^
+            +-----------------------+-----------------------+
+                                    |
+                         +----------+----------+
+                         | EnsemblGraphQLClient |
+                         +---------------------+
 ```
 
 ### 1. `EnsemblGraphQLTrait`
-Responsible for all communication with the Ensembl Beta Core GraphQL API.
+Responsible for GraphQL communication. Core is the default endpoint; variation
+and compara operations pass their dedicated configured endpoint.
 *   **Endpoint**: `https://beta.ensembl.org/data/graphql/core`
 *   **Capabilities**:
     *   Executes arbitrary GraphQL queries via `execute()`.
@@ -39,7 +39,9 @@ Responsible for all sequence-level operations complying with the Global Alliance
     *   Retrieves sequence metadata and cross-authority aliases (UCSC, INSDC, RefSeq, Ensembl) via `fetch_sequence_metadata()`.
 
 ### 3. `EnsemblGraphQLClient`
-The unified client that inherits from both traits. This client is used throughout the CLI, the MCP server, and the Agno agent to provide complete access to both annotation metadata and raw sequence data.
+The unified client inherits from the GraphQL, Refget, and REST traits. The REST
+trait resolves bare rsIDs through `rest.ensembl.org` and retrieves beta release
+metadata. This client is used throughout the CLI, MCP server, and Agno agent.
 
 ---
 
@@ -72,4 +74,10 @@ A common question is whether Refget can be used to resolve variant information (
 
 *   **Refget's Role**: Refget is strictly for **reference sequences**. It does not store variant databases.
 *   **VRS Integration**: However, Refget is a fundamental building block for the **GA4GH Variation Representation Specification (VRS)**. VRS requires that all variants are anchored to reference sequences identified by their Refget digest (prefixed with `SQ.`). This ensures that variant descriptions remain unambiguous regardless of which genome assembly or naming convention is used.
-*   **Resolving Variants**: To perform actual variant resolution (such as VEP annotation or rsid lookups), you must use a dedicated variation service (such as Ensembl's `ensembl-hypsipyle` or the Ensembl REST API variation endpoints).
+*   **Resolving Variants**: The MCP uses legacy REST to turn a bare rsID into all
+    mappings for the requested assembly, then queries Ensembl beta variation
+    GraphQL (`https://beta.ensembl.org/api/graphql/variation`, hypsipyle) with
+    each `chr:pos:rsid` identifier. This is separate from core GraphQL and
+    Refget. See
+    [Ensembl beta backends](./ensembl_beta_backends.md) for endpoints, ID format
+    (`chr:pos:rsid`), and what this MCP wraps today.

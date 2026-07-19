@@ -1,6 +1,6 @@
 [project]
 name = "ensembl-mcp"
-version = "0.2.0"
+version = "0.3.0"
 description = "MCP for the ensembl beta"
 authors = [
     { name = "antonkulaga", email = "antonkulaga@gmail.com" }
@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 ensembl-mcp = "ensembl_mcp.cli:app"
+pack = "ensembl_mcp.plugin_package:cli"
 
 [build-system]
 requires = ["uv_build>=0.10.0,<0.11.0"]
@@ -27,6 +28,7 @@ dev = [
     "agno>=2.6.11",
     "google-genai>=2.8.0",
     "openai>=2.41.0",
+    "pyarrow>=25.0.0",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
 ]

@@ -33,3 +33,31 @@ jobs:
 
       - name: Run tests
         run: uv run pytest
+
+  agent:
+    name: OpenRouter MCP agent checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run agent integration tests
+        env:
+          ENSEMBL_MCP_AGENT_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ENSEMBL_MCP_AGENT_MODEL_ID: z-ai/glm-5.2
+          ENSEMBL_MCP_AGENT_BASE_URL: https://openrouter.ai/api/v1
+        run: uv run pytest -m integration tests/test_agent.py

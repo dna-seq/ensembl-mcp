@@ -1,0 +1,72 @@
+[
+  {
+    "rsid": "rs55960271",
+    "chrom": "7",
+    "start": 143351678,
+    "ref": "C",
+    "alt": "T",
+    "genotype": "0/1",
+    "gene": "CLCN1",
+    "conclusion": "ClinVar Pathogenic/Likely pathogenic variant in CLCN1 — Skeletal muscle channelopathy"
+  },
+  {
+    "rsid": "rs587777516",
+    "chrom": "11",
+    "start": 102625218,
+    "ref": "C",
+    "alt": "T",
+    "genotype": "0/1",
+    "gene": "MMP20",
+    "conclusion": "ClinVar Pathogenic variant in MMP20 — Amelogenesis imperfecta hypomaturation type 2A2"
+  },
+  {
+    "rsid": "rs1063192",
+    "chrom": "9",
+    "start": 22003368,
+    "ref": "G",
+    "alt": "A",
+    "genotype": "0/1",
+    "gene": "CDKN2B",
+    "conclusion": "ClinVar Likely pathogenic, protective variant in CDKN2B — Three Vessel Coronary Disease"
+  },
+  {
+    "rsid": "rs2485959310",
+    "chrom": "6",
+    "start": 152337007,
+    "ref": "T",
+    "alt": "C",
+    "genotype": "1/1",
+    "gene": "SYNE1",
+    "conclusion": "ClinVar Pathogenic variant in SYNE1"
+  },
+  {
+    "rsid": "rs2139626950",
+    "chrom": "14",
+    "start": 56633141,
+    "ref": "G",
+    "alt": "A",
+    "genotype": "1/1",
+    "gene": "TMEM260",
+    "conclusion": "ClinVar Likely pathogenic variant in TMEM260 — Structural heart defects and renal anomalies syndrome"
+  },
+  {
+    "rsid": "rs2525429573",
+    "chrom": "1",
+    "start": 46194623,
+    "ref": "T",
+    "alt": "C",
+    "genotype": "1/1",
+    "gene": "TSPAN1",
+    "conclusion": "ClinVar Likely pathogenic variant in TSPAN1 — Muscular dystrophy-dystroglycanopathy"
+  },
+  {
+    "rsid": "rs1574906521",
+    "chrom": "2",
+    "start": 166306533,
+    "ref": "T",
+    "alt": "C",
+    "genotype": "1/1",
+    "gene": "SCN9A",
+    "conclusion": "ClinVar Likely pathogenic variant in SCN9A"
+  }
+]

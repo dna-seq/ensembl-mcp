@@ -12,6 +12,17 @@ SLICE_FRAGMENT = """
     }
 """
 
+EXTERNAL_REFERENCE_FRAGMENT = """
+    external_references {
+      accession_id
+      name
+      description
+      url
+      source { name url }
+      assignment_method { type description }
+    }
+"""
+
 GENE_FIELDS = f"""
     stable_id
     unversioned_stable_id
@@ -21,6 +32,25 @@ GENE_FIELDS = f"""
     version
     transcript_count
     {SLICE_FRAGMENT}
+    {EXTERNAL_REFERENCE_FRAGMENT}
+    alternative_symbols
+    metadata {{
+      biotype {{ value label definition }}
+      name {{ accession_id value url source {{ name url }} }}
+    }}
+    transcripts {{
+      stable_id
+      unversioned_stable_id
+      symbol
+      so_term
+      {SLICE_FRAGMENT}
+      metadata {{
+        mane {{ value label ncbi_transcript {{ id url }} }}
+        canonical {{ value label }}
+        appris {{ value label }}
+        tsl {{ value label }}
+      }}
+    }}
 """
 
 TRANSCRIPT_FIELDS = f"""
@@ -30,6 +60,33 @@ TRANSCRIPT_FIELDS = f"""
     so_term
     version
     {SLICE_FRAGMENT}
+    {EXTERNAL_REFERENCE_FRAGMENT}
+    relative_location {{ start end length }}
+    metadata {{
+      mane {{ value label ncbi_transcript {{ id url }} }}
+      canonical {{ value label }}
+      appris {{ value label }}
+      tsl {{ value label }}
+      gencode_basic {{ value label }}
+    }}
+    spliced_exons {{
+      index
+      relative_location {{ start end length }}
+      exon {{ stable_id slice {{ region {{ name }} location {{ start end }} }} }}
+    }}
+    product_generating_contexts {{
+      product_type
+      default
+      cds {{ start end protein_length nucleotide_length }}
+      five_prime_utr {{ start end length }}
+      three_prime_utr {{ start end length }}
+      product {{
+        stable_id
+        unversioned_stable_id
+        length
+        sequence {{ checksum alphabet {{ value }} }}
+      }}
+    }}
 """
 
 PRODUCT_FIELDS = """
@@ -38,6 +95,26 @@ PRODUCT_FIELDS = """
     type
     length
     version
+    sequence { checksum alphabet { value } }
+    external_references {
+      accession_id
+      name
+      description
+      url
+      source { name url }
+    }
+    family_matches {
+      sequence_family {
+        source { name url }
+        accession_id
+        name
+        description
+      }
+      relative_location { start end length }
+      hit_location { start end length }
+      score
+      evalue
+    }
 """
 
 GENOME_FIELDS = """

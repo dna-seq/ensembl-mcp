@@ -20,9 +20,9 @@ def human_genome_id() -> str:
     return HUMAN_GENOME_ID
 
 
-@pytest.fixture(scope="session", autouse=True)
-def require_network(settings: Settings) -> None:
-    """Skip the whole integration suite if the live endpoint is unreachable."""
+@pytest.fixture(scope="session")
+def network_error(settings: Settings) -> str | None:
+    """Probe the live core endpoint once and return an error message if offline."""
     try:
         response = httpx.post(
             settings.endpoint,
@@ -31,4 +31,12 @@ def require_network(settings: Settings) -> None:
         )
         response.raise_for_status()
     except httpx.HTTPError as error:
-        pytest.skip(f"Ensembl GraphQL endpoint unreachable: {error}")
+        return str(error)
+    return None
+
+
+@pytest.fixture(autouse=True)
+def require_network(request: pytest.FixtureRequest, network_error: str | None) -> None:
+    """Skip integration tests when Ensembl is unreachable; keep pure tests runnable."""
+    if request.node.get_closest_marker("integration") and network_error:
+        pytest.skip(f"Ensembl GraphQL endpoint unreachable: {network_error}")

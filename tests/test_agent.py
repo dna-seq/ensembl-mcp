@@ -13,8 +13,7 @@ def _compact_number_format(text: str) -> str:
 def _require_agent_key(settings: Settings) -> None:
     if get_agent_api_key(settings) is None:
         pytest.skip(
-            "Set ENSEMBL_MCP_AGENT_API_KEY, GEMINI_API_KEY, or GOOGLE_API_KEY "
-            "to run Agno agent integration tests."
+            "Set ENSEMBL_MCP_AGENT_API_KEY to run Agno agent integration tests."
         )
 
 

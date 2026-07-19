@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "ensembl",
+  "displayName": "Ensembl: Genes, Variants, and Sequences",
+  "version": "0.3.0",
+  "description": "Query Ensembl beta genes, variants, population frequencies, homologies, releases, and GA4GH Refget sequences.",
+  "author": {
+    "name": "Anton Kulaga"
+  },
+  "homepage": "https://github.com/dna-seq/ensembl-mcp",
+  "repository": "https://github.com/dna-seq/ensembl-mcp",
+  "license": "MIT",
+  "keywords": [
+    "genomics",
+    "ensembl",
+    "variants",
+    "bioinformatics"
+  ],
+  "skills": "./.claude/skills/"
+}

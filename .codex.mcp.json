@@ -1,0 +1,12 @@
+{
+  "mcp_servers": {
+    "ensembl": {
+      "command": "uvx",
+      "args": [
+        "ensembl-mcp@0.3.0",
+        "serve"
+      ],
+      "env": {}
+    }
+  }
+}

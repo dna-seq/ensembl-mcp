@@ -156,10 +156,147 @@ class EnsemblRefgetTrait:
                 return response.json()
 
 
-class EnsemblGraphQLClient(EnsemblGraphQLTrait, EnsemblRefgetTrait):
-    """Unified client combining both GraphQL and Refget capabilities."""
+class EnsemblRestTrait:
+    """Trait providing JSON access to Ensembl REST services."""
+
+    def __init__(self, settings: Settings) -> None:
+        self._settings = settings
+
+    async def fetch_rsid(self, species: str, rsid: str) -> dict[str, Any]:
+        """Retrieve legacy Ensembl variation data used to map an rsID."""
+        url = f"{self._settings.rest_endpoint}/variation/{species}/{rsid}"
+        with start_action(
+            action_type="ensembl_rest_variation_request",
+            endpoint=url,
+            species=species,
+            rsid=rsid,
+        ):
+            async with httpx.AsyncClient(timeout=self._settings.request_timeout) as http:
+                response = await http.get(
+                    url,
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                return response.json()
+
+    async def fetch_variations_at_coordinate(
+        self, species: str, coordinate: str
+    ) -> list[dict[str, Any]]:
+        """Retrieve variations overlapping an exact ``region:position`` coordinate."""
+        region, position = coordinate.split(":", maxsplit=1)
+        interval = f"{region}:{position}-{position}"
+        url = f"{self._settings.rest_endpoint}/overlap/region/{species}/{interval}"
+        with start_action(
+            action_type="ensembl_rest_coordinate_variations_request",
+            endpoint=url,
+            species=species,
+            coordinate=coordinate,
+        ):
+            async with httpx.AsyncClient(timeout=self._settings.request_timeout) as http:
+                response = await http.get(
+                    url,
+                    params={"feature": "variation"},
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                return response.json()
+
+    async def fetch_variations_in_region(
+        self,
+        species: str,
+        region: str,
+        start: int,
+        end: int,
+        consequence_type: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Retrieve all variations overlapping a genomic interval."""
+        interval = f"{region}:{start}-{end}"
+        url = f"{self._settings.rest_endpoint}/overlap/region/{species}/{interval}"
+        params: dict[str, Any] = {"feature": "variation"}
+        if consequence_type:
+            params["variant_set_id"] = consequence_type
+        with start_action(
+            action_type="ensembl_rest_region_variations_request",
+            endpoint=url,
+            species=species,
+            interval=interval,
+        ):
+            async with httpx.AsyncClient(timeout=self._settings.request_timeout) as http:
+                response = await http.get(
+                    url,
+                    params=params,
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                return response.json()
+
+    async def fetch_phenotypes_for_gene(
+        self,
+        species: str,
+        gene: str,
+    ) -> list[dict[str, Any]]:
+        """Retrieve phenotype associations for a gene symbol or Ensembl ID."""
+        url = f"{self._settings.rest_endpoint}/phenotype/gene/{species}/{gene}"
+        with start_action(
+            action_type="ensembl_rest_gene_phenotypes_request",
+            endpoint=url,
+            species=species,
+            gene=gene,
+        ):
+            async with httpx.AsyncClient(timeout=self._settings.request_timeout) as http:
+                response = await http.get(
+                    url,
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                return response.json()
+
+    async def fetch_variant_recoder(
+        self,
+        species: str,
+        variant_id: str,
+    ) -> list[dict[str, Any]]:
+        """Recode a variant between rsID, HGVS, SPDI, and VCF representations."""
+        url = f"{self._settings.rest_endpoint}/variant_recoder/{species}/{variant_id}"
+        with start_action(
+            action_type="ensembl_rest_variant_recoder_request",
+            endpoint=url,
+            species=species,
+            variant_id=variant_id,
+        ):
+            async with httpx.AsyncClient(timeout=self._settings.request_timeout) as http:
+                response = await http.get(
+                    url,
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                return response.json()
+
+    async def fetch_releases(self) -> Any:
+        """Retrieve release metadata from the Ensembl beta metadata API."""
+        url = f"{self._settings.metadata_endpoint}/releases"
+        with start_action(
+            action_type="ensembl_metadata_releases_request",
+            endpoint=url,
+        ):
+            async with httpx.AsyncClient(timeout=self._settings.request_timeout) as http:
+                response = await http.get(
+                    url,
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                return response.json()
+
+
+class EnsemblGraphQLClient(
+    EnsemblGraphQLTrait,
+    EnsemblRefgetTrait,
+    EnsemblRestTrait,
+):
+    """Unified client combining GraphQL, Refget, and REST capabilities."""
 
     def __init__(self, settings: Settings | None = None) -> None:
         settings = settings or get_settings()
         EnsemblGraphQLTrait.__init__(self, settings)
         EnsemblRefgetTrait.__init__(self, settings)
+        EnsemblRestTrait.__init__(self, settings)

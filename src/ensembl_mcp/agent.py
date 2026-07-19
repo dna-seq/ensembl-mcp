@@ -1,5 +1,4 @@
 import asyncio
-import os
 from typing import Any
 
 from ensembl_mcp import server
@@ -19,34 +18,16 @@ def _load_agent() -> type[Any]:
     return Agent
 
 
-def _is_gemini_model(model_id: str) -> bool:
-    return model_id.lower().startswith("gemini")
-
-
 def get_agent_api_key(settings: Settings) -> str | None:
-    """Return the configured model API key without requiring one key name."""
+    """Return the configured model API key."""
     explicit_key = (settings.agent_api_key or "").strip()
     if explicit_key:
         return explicit_key
-    if _is_gemini_model(settings.agent_model_id):
-        return (
-            os.getenv("GEMINI_API_KEY", "").strip()
-            or os.getenv("GOOGLE_API_KEY", "").strip()
-            or None
-        )
     return None
 
 
 def _create_model(settings: Settings, api_key: str) -> Any:
     try:
-        if _is_gemini_model(settings.agent_model_id):
-            from agno.models.google import Gemini
-
-            return Gemini(
-                id=settings.agent_model_id,
-                api_key=api_key,
-                timeout=settings.agent_timeout,
-            )
         from agno.models.openai import OpenAIChat
 
         return OpenAIChat(
@@ -68,8 +49,8 @@ def create_agent(settings: Settings | None = None) -> Any:
     api_key = get_agent_api_key(settings)
     if not api_key:
         raise ValueError(
-            "Set ENSEMBL_MCP_AGENT_API_KEY, GEMINI_API_KEY, or GOOGLE_API_KEY "
-            "in .env or the environment to use the agent."
+            "Set ENSEMBL_MCP_AGENT_API_KEY in .env or the environment "
+            "to use the agent."
         )
 
     agent_cls = _load_agent()
@@ -81,6 +62,71 @@ def create_agent(settings: Settings | None = None) -> Any:
         Use this only when the user asks about the Ensembl API version.
         """
         return asyncio.run(server.op_version(client))
+
+    def get_variant(
+        identifier: str,
+        genome_id: str = settings.human_genome_id,
+        species: str = "human",
+        assembly: str = "GRCh38",
+    ) -> dict[str, Any] | None:
+        """Get rich annotation for a bare rsID or region:position:rsid identifier.
+
+        Read variant location from ``slice`` and inspect every ``alleles`` item;
+        multiallelic sites can have more than one alternate allele. Each allele
+        carries explicitly named population frequencies. Full responses include
+        phenotype assertions and transcript molecular consequences with gene,
+        transcript, protein, and coordinate fields.
+
+        Prediction scope matters: variant results include Ensembl VEP, GERP, and
+        AncestralAllele; allele results include CADD; transcript-consequence
+        results include SIFT, SpliceAI, and sometimes PolyPhen. Never combine
+        scores from different methods or report a frequency without its population.
+        """
+        if ":" in identifier:
+            return asyncio.run(
+                server.op_get_variant(
+                    client,
+                    genome_id,
+                    identifier,
+                    settings.variation_endpoint,
+                )
+            )
+        return asyncio.run(
+            server.op_get_variant_by_rsid(
+                client,
+                identifier,
+                genome_id,
+                settings.variation_endpoint,
+                species,
+                assembly,
+            )
+        )
+
+    def resolve_rsid(
+        rsid: str,
+        species: str = "human",
+        assembly: str = "GRCh38",
+    ) -> dict[str, Any]:
+        """Resolve a bare rsID to coordinate IDs without fetching annotation."""
+        return asyncio.run(server.op_resolve_rsid(client, rsid, species, assembly))
+
+    def get_homologies(
+        gene_stable_id: str,
+        genome_id: str = settings.human_genome_id,
+    ) -> list[dict[str, Any]]:
+        """Get compara homologies for an Ensembl gene stable ID."""
+        return asyncio.run(
+            server.op_get_homologies(
+                client,
+                genome_id,
+                gene_stable_id,
+                settings.compara_endpoint,
+            )
+        )
+
+    def get_releases() -> Any:
+        """Get integrated and partial Ensembl beta release metadata."""
+        return asyncio.run(server.op_get_releases(client))
 
     def find_genes_by_symbol(
         symbol: str, genome_id: str = settings.human_genome_id
@@ -251,6 +297,10 @@ def create_agent(settings: Settings | None = None) -> Any:
         model=model,
         tools=[
             get_version,
+            get_variant,
+            resolve_rsid,
+            get_homologies,
+            get_releases,
             find_genes_by_symbol,
             get_gene_by_id,
             get_transcript,
@@ -265,7 +315,7 @@ def create_agent(settings: Settings | None = None) -> Any:
             graphql_query_to_file,
         ],
         instructions=[
-            "Answer questions about Ensembl beta core data using the provided tools.",
+            "Answer questions about Ensembl beta data using the provided tools.",
             (
                 "Default to the configured human reference genome id when the user "
                 "does not specify a species or genome."
@@ -274,6 +324,26 @@ def create_agent(settings: Settings | None = None) -> Any:
             (
                 "Parse coordinate prompts like chr13:32315086-32400268 as "
                 "region_name=13, start=32315086, end=32400268."
+            ),
+            (
+                "Use get_variant directly for bare rsIDs such as rs699 or variation "
+                "IDs such as 1:230710048:rs699. Use resolve_rsid only when the user "
+                "needs coordinate mappings without full annotation."
+            ),
+            (
+                "For variants, inspect every allele: identify reference_sequence and "
+                "allele_sequence, preserve all alternate alleles, and name the exact "
+                "population beside each reported frequency."
+            ),
+            (
+                "Keep predictions at their returned scope: Ensembl VEP/GERP/"
+                "AncestralAllele are variant-level, CADD is allele-level, and SIFT/"
+                "SpliceAI/PolyPhen are transcript-consequence-level. Do not merge "
+                "their scores or infer a clinical diagnosis from them."
+            ),
+            (
+                "Report phenotype assertions as sourced associations, not diagnoses; "
+                "include the phenotype source such as ClinVar when available."
             ),
             "Use get_product_by_id for ENSP ids and get_transcript for ENST ids.",
             (
@@ -285,7 +355,11 @@ def create_agent(settings: Settings | None = None) -> Any:
                 "unless the user asks for a short subsequence inline."
             ),
             "Keep answers concise and include stable ids, symbols, or regions when useful.",
-            "Explain that variants and rsid lookups are out of scope for this MCP server.",
+            (
+                "Do not claim AlphaMissense, ESM1b, or structural-variant support: "
+                "those data are not available from the wrapped API. PolyPhen may "
+                "appear at transcript-consequence level when Ensembl returns it."
+            ),
         ],
         markdown=True,
         tool_call_limit=8,

@@ -3,6 +3,10 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_ENDPOINT = "https://beta.ensembl.org/data/graphql/core"
+DEFAULT_VARIATION_ENDPOINT = "https://beta.ensembl.org/api/graphql/variation"
+DEFAULT_COMPARA_ENDPOINT = "https://beta.ensembl.org/api/graphql/compara"
+DEFAULT_METADATA_ENDPOINT = "https://beta.ensembl.org/api/metadata"
+DEFAULT_REST_ENDPOINT = "https://rest.ensembl.org"
 
 HUMAN_GENOME_ID = "a7335667-93e7-11ec-a39d-005056b38ce3"
 
@@ -31,6 +35,22 @@ class Settings(BaseSettings):
         default="https://beta.ensembl.org/data/refget",
         description="Base Ensembl Refget endpoint used for sequence queries.",
     )
+    variation_endpoint: str = Field(
+        default=DEFAULT_VARIATION_ENDPOINT,
+        description="Ensembl beta variation GraphQL endpoint.",
+    )
+    compara_endpoint: str = Field(
+        default=DEFAULT_COMPARA_ENDPOINT,
+        description="Ensembl beta compara GraphQL endpoint.",
+    )
+    metadata_endpoint: str = Field(
+        default=DEFAULT_METADATA_ENDPOINT,
+        description="Base Ensembl beta metadata REST endpoint.",
+    )
+    rest_endpoint: str = Field(
+        default=DEFAULT_REST_ENDPOINT,
+        description="Base legacy Ensembl REST endpoint used to resolve rsIDs.",
+    )
     request_timeout: float = Field(
         default=60.0,
         description=(
@@ -51,12 +71,12 @@ class Settings(BaseSettings):
         description="API key used by the optional Agno natural-language agent.",
     )
     agent_model_id: str = Field(
-        default="gpt-4o-mini",
+        default="z-ai/glm-5.2",
         description="OpenAI-compatible model id used by the optional Agno agent.",
     )
     agent_base_url: str | None = Field(
-        default=None,
-        description="Optional OpenAI-compatible base URL for the Agno agent model.",
+        default="https://openrouter.ai/api/v1",
+        description="OpenAI-compatible base URL for the Agno agent model.",
     )
     agent_timeout: float = Field(
         default=120.0,
