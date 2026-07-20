@@ -238,13 +238,16 @@ failure modes.
 ### ⚡ Claude Code
 
 ```bash
-git clone https://github.com/dna-seq/ensembl-mcp.git
-claude --plugin-dir ./ensembl-mcp
+claude plugin marketplace add dna-seq/dna-seq-claude-marketplace
+claude plugin install ensembl@dna-seq
 ```
 
-One install gives Claude the plugin’s skills and its preconfigured, pinned Ensembl
-MCP server. Ask: **“Tell me about BRCA2 and identify its MANE Select
-transcript.”**
+One install gives Claude the plugin’s ten genomics skills and its preconfigured,
+pinned Ensembl MCP server. Ask: **“Tell me about BRCA2 and identify its MANE
+Select transcript.”**
+
+For local plugin development, clone this repository and run
+`claude --plugin-dir ./ensembl-mcp`.
 
 ### 💼 Claude Desktop and Cowork
 
@@ -280,16 +283,19 @@ portable, so the same live Ensembl tools also work in:
 
 ## Install the Codex plugin
 
-The native Codex plugin reuses the genomics skills and pinned server configuration
-from this repository. Add the DNA-Seq plugin marketplace:
+The native Codex plugin reuses the genomics skills and pinned server
+configuration from this repository. The shared DNA Seq marketplace also
+contains the just-prs plugin:
 
 ```bash
-codex plugin marketplace add dna-seq/ensembl-mcp
+codex plugin marketplace add dna-seq/dna-seq-claude-marketplace
 ```
 
-In Codex, run `/plugins`, choose **DNA-Seq Plugins**, and install
+In Codex Desktop, open **Plugins**, choose **DNA Seq Genomics**, and install
 **Ensembl: Genes, Variants, and Sequences**. The plugin provides both the
-Ensembl tools and the matching genomics workflows.
+Ensembl tools and the matching genomics workflows. If no Codex CLI is installed,
+clone the marketplace repository, open that checkout in Codex Desktop, and use
+the same Plugins interface.
 
 For a bare-server setup instead, use
 `codex mcp add ensembl -- uvx ensembl-mcp serve`. See

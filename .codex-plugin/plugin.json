@@ -21,7 +21,7 @@
     "shortDescription": "Live Ensembl genomics tools and workflows for Codex.",
     "longDescription": "Query live Ensembl genes, variants, population frequencies, phenotypes, proteins, and GA4GH Refget sequences with focused genomics skills.",
     "developerName": "Anton Kulaga",
-    "category": "Productivity",
+    "category": "Research",
     "capabilities": [
       "Read"
     ],

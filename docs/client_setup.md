@@ -55,11 +55,15 @@ Install the native Codex plugin to get both the Ensembl MCP server and the
 bundled genomics skills:
 
 ```bash
-codex plugin marketplace add dna-seq/ensembl-mcp
+codex plugin marketplace add dna-seq/dna-seq-claude-marketplace
 ```
 
-Open Codex and run `/plugins`, choose **DNA-Seq Plugins**, then install
+Open Codex Desktop, choose **Plugins** → **DNA Seq Genomics**, then install
 **Ensembl: Genes, Variants, and Sequences**.
+
+When Codex Desktop is installed without the optional CLI, clone the marketplace
+repository and open that checkout as a Codex project. Its
+`.agents/plugins/marketplace.json` is discovered automatically.
 
 For a tools-only setup, Codex clients also share direct MCP configuration. Add
 the server once from a terminal:
@@ -189,9 +193,9 @@ Build the deterministic metadata-only plugin archive with:
 uv run pack plugin
 ```
 
-The ZIP contains the plugin manifest, pinned `uvx` MCP configuration, variant
-lookup skill, README, and license. The server itself remains distributed through
-PyPI and is launched as `uvx ensembl-mcp@0.3.0 serve`.
+The ZIP contains the plugin manifest, pinned `uvx` MCP configuration, all ten
+focused Ensembl skills, README, and license. The server itself remains
+distributed through PyPI and is launched as `uvx ensembl-mcp@0.3.0 serve`.
 
 ## Environment Variables
 

@@ -28,6 +28,18 @@ def test_plugin_archive_is_deterministic(tmp_path: Path) -> None:
     assert first.read_bytes() == second.read_bytes()
 
 
+def test_claude_plugin_declares_runtime_components() -> None:
+    source_dir = Path(__file__).parents[1]
+    manifest = json.loads(
+        (source_dir / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
+    )
+
+    assert manifest["skills"] == "./.claude/skills/"
+    assert manifest["mcpServers"] == "./.mcp.json"
+    assert (source_dir / manifest["skills"].removeprefix("./")).is_dir()
+    assert (source_dir / manifest["mcpServers"].removeprefix("./")).is_file()
+
+
 def test_codex_plugin_points_to_reusable_components() -> None:
     source_dir = Path(__file__).parents[1]
     manifest = json.loads(

@@ -16,5 +16,6 @@
     "variants",
     "bioinformatics"
   ],
-  "skills": "./.claude/skills/"
+  "skills": "./.claude/skills/",
+  "mcpServers": "./.mcp.json"
 }
