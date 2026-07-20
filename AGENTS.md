@@ -25,6 +25,9 @@ background-task capable (MCP SEP-1686 via FastMCP `TaskConfig`).
 - `src/ensembl_mcp/agent.py` - optional Agno natural-language agent over the same `op_*` functions.
 - `src/ensembl_mcp/cli.py` - Typer app: `serve` and `examples` commands.
 - `src/ensembl_mcp/plugin_package.py` - deterministic metadata-only Claude plugin ZIP.
+- `.mcp.json` and `.codex.mcp.json` - published-package MCP launch configuration.
+- `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` - plugin manifests.
+- `.github/workflows/publish.yml` - tag/manual PyPI publishing workflow.
 - `tests/test_enriched_tools.py` - integration tests for enriched fields and new tools (Phases 1-3).
 - `tests/` - real integration tests against the live endpoint.
 
@@ -57,6 +60,30 @@ uv run ensembl-mcp agent "Which human chromosome contains BRCA2?"
 uv run pytest -m integration              # run integration tests
 uv run pack plugin                        # build thin Claude plugin ZIP
 ```
+
+## Releasing and publishing
+
+- Keep the version in `pyproject.toml`, both plugin manifests, `.mcp.json`, and
+  `.codex.mcp.json` aligned. The MCP configs use `uvx ensembl-mcp@<version> serve`,
+  so that exact version must exist on PyPI before installed plugins can start.
+- Local PyPI publishing credentials are stored in `.env`. Never print, log, or
+  commit them. Load `.env` into the process environment before running `uv publish`;
+  accept either `UV_PUBLISH_TOKEN` or `PYPI_TOKEN`.
+- `dist/` also contains Claude plugin ZIPs and older releases. Publish the newly
+  built wheel and source archive explicitly instead of publishing every file:
+
+```bash
+uv build
+set -a && source .env && set +a
+export UV_PUBLISH_TOKEN="${UV_PUBLISH_TOKEN:-${PYPI_TOKEN:-}}"
+uv publish "dist/ensembl_mcp-<version>-py3-none-any.whl" \
+  "dist/ensembl_mcp-<version>.tar.gz"
+uvx --refresh "ensembl-mcp@<version>" --help
+```
+
+- `.github/workflows/publish.yml` publishes on `v*` tags or manual dispatch using
+  the repository `PYPI_TOKEN` secret. If that secret is unavailable, use the local
+  `.env` credential.
 
 ## Agent testing
 
